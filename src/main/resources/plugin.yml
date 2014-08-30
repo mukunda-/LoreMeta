@@ -1,5 +1,5 @@
 name: LoreMeta
-main: com.mukunda.magicitems.LoreMetaPlugin
+main: com.mukunda.loremeta.LoreMetaPlugin
 version: ${version}
 commands:
   loremeta_test:

@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -20,11 +21,10 @@ public final class LoreMeta {
 	
 	// "fields" are prefixed by this, this replaces "##~" prefix in stock items
 	private static final String TAG_FIELD = ChatColor.COLOR_CHAR + "\u0300";
-	 
 	  
 	//---------------------------------------------------------------------------------------------
 	// search for and process LoreMeta initialization tags
-	public static void init( ItemStack item ) {
+	public static void initialize( ItemStack item ) {
 		ItemMeta meta = item.getItemMeta();
 		if( !meta.hasLore() ) return; // no initialization needed.
 		
@@ -100,16 +100,16 @@ public final class LoreMeta {
 	
 	//---------------------------------------------------------------------------------------------
 	private static int getPackedInt( String data, int offset ) {
-		return  (((int)(data.charAt(offset+0) - DATA_BASE))    ) + 
-				(((int)(data.charAt(offset+2) - DATA_BASE))<<8 ) + 
-				(((int)(data.charAt(offset+4) - DATA_BASE))<<16) + 
+		return  (((int)(data.charAt(offset+0) - DATA_BASE))    ) | 
+				(((int)(data.charAt(offset+2) - DATA_BASE))<<8 ) |
+				(((int)(data.charAt(offset+4) - DATA_BASE))<<16) |
 				(((int)(data.charAt(offset+6) - DATA_BASE))<<24);
 	}
 	
 	//---------------------------------------------------------------------------------------------
 	private static long getPackedLong( String data, int offset ) {
-		return  (((long)getPackedInt( data, offset   ))    )+ 
-				(((long)getPackedInt( data, offset+8 ))<<32);
+		return  ( ((long)getPackedInt( data, offset   ))&0xFFFFFFFFL )| 
+				( ((long)getPackedInt( data, offset+8 ))<<32 );
 	}
 	
 	//---------------------------------------------------------------------------------------------
@@ -133,12 +133,17 @@ public final class LoreMeta {
 		case BYTE:
 			return (byte)(data.charAt(index) - DATA_BASE) ;
 		case SHORT:
-			return (short)((int)(data.charAt(index) - DATA_BASE) + ((int)(data.charAt(index+2) - DATA_BASE) << 8));
+			return (short)((int)(data.charAt(index) - DATA_BASE) | ((int)(data.charAt(index+2) - DATA_BASE) << 8));
 		case INT:
 			return getPackedInt( data, index );
 		case LONG:
 			return getPackedLong( data, index );
 		case UID:
+			long a = getPackedLong( data, index+16 );
+			long b = getPackedLong( data, index  );
+
+			Bukkit.broadcastMessage( "DEBUG: uuid-a " + a );
+			Bukkit.broadcastMessage( "DEBUG: uuid-b " + b );
 			return new UUID( getPackedLong( data, index+16 ), getPackedLong( data, index ) ); 
 		default:
 			return null;
@@ -172,6 +177,7 @@ public final class LoreMeta {
 		default:
 			return;
 		}
+		length += key.getFormattedKey().length();
 		builder.delete( index, index + length );
 	}
 	
@@ -214,7 +220,8 @@ public final class LoreMeta {
 	
 	//---------------------------------------------------------------------------------------------
 	private static void writeLong( StringBuilder output, long value ) {
-		writeInt( output, (int)(value & 0xFFFFFFFF) );
+		Bukkit.broadcastMessage( "DEBUG: writeLong " + value );
+		writeInt( output, (int)(value & 0xFFFFFFFFL) );
 		writeInt( output, (int)(value >> 32) );
 	}
 	
@@ -239,8 +246,7 @@ public final class LoreMeta {
 			break;
 		case BYTE:
 			writeByte( output, (Byte)value );
-			
-			
+			 
 			break;
 		case SHORT:
 			writeShort( output, (Short)value );
