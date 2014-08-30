@@ -1,3 +1,7 @@
 name: LoreMeta
 main: com.mukunda.magicitems.LoreMetaPlugin
 version: ${version}
+commands:
+  loremeta_test:
+    description: test function
+    usage: /loremeta_test
