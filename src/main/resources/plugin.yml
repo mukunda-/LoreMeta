@@ -1,0 +1,3 @@
+name: LoreMeta
+main: com.mukunda.magicitems.LoreMetaPlugin
+version: ${version}
