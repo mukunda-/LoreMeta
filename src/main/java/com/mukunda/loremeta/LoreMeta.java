@@ -256,7 +256,7 @@ public final class LoreMeta {
 	
 	//---------------------------------------------------------------------------------------------
 	private static int getPackedInt( String data, int offset ) {
-		return  (((int)(data.charAt(offset+0) - DATA_BASE))    ) | 
+		return	(((int)(data.charAt(offset+0) - DATA_BASE))    ) | 
 				(((int)(data.charAt(offset+2) - DATA_BASE))<<8 ) |
 				(((int)(data.charAt(offset+4) - DATA_BASE))<<16) |
 				(((int)(data.charAt(offset+6) - DATA_BASE))<<24);
@@ -264,7 +264,7 @@ public final class LoreMeta {
 	
 	//---------------------------------------------------------------------------------------------
 	private static long getPackedLong( String data, int offset ) {
-		return  ( ((long)getPackedInt( data, offset   ))&0xFFFFFFFFL )| 
+		return	( ((long)getPackedInt( data, offset   ))&0xFFFFFFFFL )| 
 				( ((long)getPackedInt( data, offset+8 ))<<32 );
 	}
 	
@@ -284,6 +284,7 @@ public final class LoreMeta {
 			StringBuilder string = new StringBuilder();
 			for( int i = 0; i < length; i++ ) {
 				string.append( data.charAt(index+i*2) );
+				
 			}
 			return string.toString();
 		case BYTE:
