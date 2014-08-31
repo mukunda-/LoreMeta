@@ -1,15 +1,14 @@
 package com.mukunda.loremeta;
 
 import java.util.UUID;
-
-import org.bukkit.ChatColor;
- 
  
 //---------------------------------------------------------------------------------------------
 public enum DataType {
 	// types of data an entry can hold
 	
 	BYTE(1),SHORT(2),INT(3),LONG(4),UID(5),TEXT(6);
+	
+	private static final char COLOR_CHAR = '\u00A7';
 	
 	int type;
 	private DataType(int type) {
@@ -41,7 +40,7 @@ public enum DataType {
 	}
 	
 	public String getTag() {
-		return "" + ChatColor.COLOR_CHAR + (char)(0x200+type);
+		return "" + COLOR_CHAR + (char)(0x200+type);
 	}
 	
 	public Object convertString( String input ) {

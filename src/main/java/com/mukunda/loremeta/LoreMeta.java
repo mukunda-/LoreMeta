@@ -13,17 +13,38 @@ import org.bukkit.ChatColor;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+
 public final class LoreMeta {
 	 
 	//---------------------------------------------------------------------------------------------
-	// offset added to data when setting char values
-	private static final int DATA_BASE = 0x100;
-	
-	// "fields" are prefixed by this, this replaces "##~" prefix in stock items
-	private static final String TAG_FIELD = ChatColor.COLOR_CHAR + "\u0300";
-	  
+	// item initialization function
+	// this replaces certain markers with hidden codes
+	//
+	// ## marks a field
+	//
+	// ##Charges: 1 will define a field called "Charges", with initial value "3"
+	// color codes are ignored for field names
+	//
+	// after processing, the ## will be hidden, and only "Charges: 3" will show.
+	// this field can be read and changed with the functions
+	//   readField( item, "Charges" )
+	//   setField( item, "Charges", "2" )
+	// "Fields" are visible data 
+	//
+	// @@[x:yyyy:z] is a data initializer
+	//   x may be B,S,I,L,Q, or T for BYTE,SHORT,INT,LONG,UUID,TEXT respectively
+	//   yyyy is the name of the data entry 
+	//   z is the initial value of the data entry
+	//
+	//   this must be the only text on a lore line
+	//   for example: @@[I:test:50] will create an "int" with the value 50, and then
+	//    LoreMeta.readData( item, new MetaKeyInt( "test" ) ) will return 50.
+	//
+	//   if an error occurs the line will be skipped
+	//   otherwise these lines are removed from the lore afterwards
+	//
+	// this function preserves any LoreMeta data already present.
 	//---------------------------------------------------------------------------------------------
-	// search for and process LoreMeta initialization tags
 	public static void initialize( ItemStack item ) {
 		ItemMeta meta = item.getItemMeta();
 		if( !meta.hasLore() ) return; // no initialization needed.
@@ -81,7 +102,142 @@ public final class LoreMeta {
 		meta.setLore( lore );
 		item.setItemMeta( meta );
 	}
+	  
+	//---------------------------------------------------------------------------------------------
+	// data reading function
+	//
+	// returns null if no data exists for the key
+	//---------------------------------------------------------------------------------------------
+	public static Byte getData( ItemStack item, MetaKeyByte key ) {
+		return (Byte)getDataI( item, key );
+	}
+	
+	public static Short getData( ItemStack item, MetaKeyShort key ) {
+		return (Short)getDataI( item, key );
+	}
+
+	public static Integer getData( ItemStack item, MetaKeyInt key ) {
+		return (Integer)getDataI( item, key );
+	}
+	
+	public static Long getData( ItemStack item, MetaKeyLong key ) {
+		return (Long)getDataI( item, key );
+	}
+	
+	public static UUID getData( ItemStack item, MetaKeyUUID key ) {
+		return (UUID)getDataI( item, key );
+	}
+
+	public static String getData( ItemStack item, MetaKeyText key ) {
+		return (String)getDataI( item, key );
+	}
+	
+	//---------------------------------------------------------------------------------------------
+	// checks if a data entry exists
+	//---------------------------------------------------------------------------------------------
+	public boolean hasData( ItemStack item, MetaKey key ) {
+		String data = getFirstLoreSafely( item );
+		if( data == null ) return false;
+		return data.contains( key.getFormattedKey() );
+	}
+
+	//---------------------------------------------------------------------------------------------
+	// data writing functions 
+	//---------------------------------------------------------------------------------------------
+	public static void setData( ItemStack item, MetaKeyByte key, Byte value ) {
+		setDataI( item, key, value );
+	}
 	 
+	public static void setData( ItemStack item, MetaKeyShort key, Short value ) {
+		setDataI( item, key, value ); 
+	}
+ 
+	public static void setData( ItemStack item, MetaKeyInt key, Integer value ) {
+		setDataI( item, key, value ); 
+	}
+	 
+	public static void setData( ItemStack item, MetaKeyLong key, Long value ) {
+		setDataI( item, key, value ); 
+	}
+	 
+	public static void setData( ItemStack item, MetaKeyUUID key, UUID value ) {
+		setDataI( item, key, value ); 
+	}
+	
+	public static void setData( ItemStack item, MetaKeyText key, String value ) {
+		setDataI( item, key, value ); 
+	}
+	
+	//---------------------------------------------------------------------------------------------
+	// read data from field
+	// if the field doesn't exist it will return null
+	//
+	// fields are defined by prefixing a lore entry with ##, and calling "initialize" on the item
+	//---------------------------------------------------------------------------------------------
+	public static String getField( ItemStack item, String key ) {
+		
+		List<String> lore = getLoreSafely( item );
+		if( lore == null ) return null;
+		
+		for( String loreEntry : lore ) {
+			if( loreEntry.startsWith( TAG_FIELD ) ) {
+				int splitter = loreEntry.indexOf( ":" );
+				if( splitter == -1 ) continue; // malformed field!
+				String fieldName = loreEntry.substring( 2, splitter );
+				fieldName = stripFieldKey( fieldName );
+				if( !fieldName.equals(key) ) continue;
+				String fieldValue = loreEntry.substring( splitter+1 );
+				return fieldValue.trim();
+			}
+		}
+		return null;
+	}
+	
+	//---------------------------------------------------------------------------------------------
+	// set a field value
+	//---------------------------------------------------------------------------------------------
+	public static boolean setField( ItemStack item, String key, String value ) { 
+		
+		List<String> lore = getLoreSafely( item );
+		if( lore == null ) return false;
+
+		for( int i = 0; i < lore.size(); i++ ) {
+			String loreEntry = lore.get(i);
+			if( loreEntry.startsWith( TAG_FIELD ) ) {
+				int splitter = loreEntry.indexOf( ":" );
+				if( splitter == -1 ) continue; // malformed field!
+				String fieldName = loreEntry.substring( 2, splitter );
+				fieldName = stripFieldKey( fieldName );
+				if( !fieldName.equals(key) ) continue;
+				
+				String newLore = loreEntry.substring( 0, splitter+1 ) + " " + value;
+				lore.set( i, newLore );
+				ItemMeta meta = item.getItemMeta();
+				meta.setLore( lore );
+				item.setItemMeta( meta );
+				return true;
+			}
+		}
+		
+		return false;
+	}
+
+	//---------------------------------------------------------------------------------------------
+	private static String stripFieldKey( String string ) {
+ 
+		return ChatColor.stripColor( string ).trim(); 
+	}
+	
+	
+	private static final char COLOR_CHAR = '\u00A7';
+	 
+	//---------------------------------------------------------------------------------------------
+	// offset added to data when setting char values
+	private static final int DATA_BASE = 0x100;
+	
+	// "fields" are prefixed by this, this replaces "##~" prefix in stock items
+	private static final String TAG_FIELD = COLOR_CHAR + "\u0300";
+	  
 	//---------------------------------------------------------------------------------------------
 	private static List<String> getLoreSafely( ItemStack item ) {
 		if( item == null ) return null;
@@ -113,7 +269,7 @@ public final class LoreMeta {
 	}
 	
 	//---------------------------------------------------------------------------------------------
-	public static Object getDataI( ItemStack item, MetaKey key ) {
+	private static Object getDataI( ItemStack item, MetaKey key ) {
 		String data = getFirstLoreSafely( item );
 		if( data == null ) return null;
 		 
@@ -189,7 +345,7 @@ public final class LoreMeta {
 	//---------------------------------------------------------------------------------------------
 	private static void writeByte( StringBuilder output, byte value ) {
 		char[] data = new char[2];
-		data[0] = ChatColor.COLOR_CHAR;
+		data[0] = COLOR_CHAR;
 		data[1] = dataChar(value);
 		output.append( data );
 	}
@@ -197,9 +353,9 @@ public final class LoreMeta {
 	//---------------------------------------------------------------------------------------------
 	private static void writeShort( StringBuilder output, short value ) {
 		char[] data = new char[4];
-		data[0] = ChatColor.COLOR_CHAR;
+		data[0] = COLOR_CHAR;
 		data[1] = dataChar(value);
-		data[2] = ChatColor.COLOR_CHAR;
+		data[2] = COLOR_CHAR;
 		data[3] = dataChar(value>>8);
 		output.append( data );
 	} 
@@ -207,13 +363,13 @@ public final class LoreMeta {
 	//---------------------------------------------------------------------------------------------
 	private static void writeInt( StringBuilder output, int value ) {
 		char[] data = new char[8];
-		data[0] = ChatColor.COLOR_CHAR;
+		data[0] = COLOR_CHAR;
 		data[1] = dataChar(value);
-		data[2] = ChatColor.COLOR_CHAR;
+		data[2] = COLOR_CHAR;
 		data[3] = dataChar(value>>8);
-		data[4] = ChatColor.COLOR_CHAR;
+		data[4] = COLOR_CHAR;
 		data[5] = dataChar(value>>16);
-		data[6] = ChatColor.COLOR_CHAR;
+		data[6] = COLOR_CHAR;
 		data[7] = dataChar(value>>24);
 		output.append( data );
 	}
@@ -238,9 +394,9 @@ public final class LoreMeta {
 		switch( key.getDataType() ) {
 		case TEXT:
 			String valueString = (String)value; 
-			output.append( "" + ChatColor.COLOR_CHAR + (char)(valueString.length()+DATA_BASE) );
+			output.append( "" + COLOR_CHAR + (char)(valueString.length()+DATA_BASE) );
 			for( int i =0; i < valueString.length(); i++ ) {
-				output.append( "" + ChatColor.COLOR_CHAR + valueString.charAt(i) );
+				output.append( "" + COLOR_CHAR + valueString.charAt(i) );
 			}
 			
 			break;
@@ -292,119 +448,7 @@ public final class LoreMeta {
 		
 		meta.setLore( lore );
 		item.setItemMeta( meta );
-	}
-	
-	//---------------------------------------------------------------------------------------------
-	public static Byte getData( ItemStack item, MetaKeyByte key ) {
-		return (Byte)getDataI( item, key );
-	}
-
-	//---------------------------------------------------------------------------------------------
-	public static Short getData( ItemStack item, MetaKeyShort key ) {
-		return (Short)getDataI( item, key );
-	}
-
-	//---------------------------------------------------------------------------------------------
-	public static Integer getData( ItemStack item, MetaKeyInt key ) {
-		return (Integer)getDataI( item, key );
-	}
-	
-	//---------------------------------------------------------------------------------------------
-	public static Long getData( ItemStack item, MetaKeyLong key ) {
-		return (Long)getDataI( item, key );
-	}
-
-	//---------------------------------------------------------------------------------------------
-	public static UUID getData( ItemStack item, MetaKeyUUID key ) {
-		return (UUID)getDataI( item, key );
-	}
-	
-	//---------------------------------------------------------------------------------------------
-	public static String getData( ItemStack item, MetaKeyText key ) {
-		return (String)getDataI( item, key );
-	}
-
-	//---------------------------------------------------------------------------------------------
-	public static void setData( ItemStack item, MetaKeyByte key, Byte value ) {
-		setDataI( item, key, value );
-	}
-	
-	//---------------------------------------------------------------------------------------------
-	public static void setData( ItemStack item, MetaKeyShort key, Short value ) {
-		setDataI( item, key, value ); 
-	}
-
-	//---------------------------------------------------------------------------------------------
-	public static void setData( ItemStack item, MetaKeyInt key, Integer value ) {
-		setDataI( item, key, value ); 
-	}
-	
-	//---------------------------------------------------------------------------------------------
-	public static void setData( ItemStack item, MetaKeyLong key, Long value ) {
-		setDataI( item, key, value ); 
-	}
-	
-	//---------------------------------------------------------------------------------------------
-	public static void setData( ItemStack item, MetaKeyUUID key, UUID value ) {
-		setDataI( item, key, value ); 
-	}
-
-	//---------------------------------------------------------------------------------------------
-	public static void setData( ItemStack item, MetaKeyText key, String value ) {
-		setDataI( item, key, value ); 
-	}
-	
-	//---------------------------------------------------------------------------------------------
-	private static String stripFieldKey( String string ) {
-		return ChatColor.stripColor( string ).trim(); 
-	}
-	
-	//---------------------------------------------------------------------------------------------
-	public static String getField( ItemStack item, String key ) {
-		
-		List<String> lore = getLoreSafely( item );
-		if( lore == null ) return null;
-		
-		for( String loreEntry : lore ) {
-			if( loreEntry.startsWith( TAG_FIELD ) ) {
-				int splitter = loreEntry.indexOf( ":" );
-				if( splitter == -1 ) continue; // malformed field!
-				String fieldName = loreEntry.substring( 2, splitter );
-				fieldName = stripFieldKey( fieldName );
-				if( !fieldName.equals(key) ) continue;
-				String fieldValue = loreEntry.substring( splitter+1 );
-				return fieldValue.trim();
-			}
-		}
-		return null;
-	}
-
-	//---------------------------------------------------------------------------------------------
-	public static boolean setField( ItemStack item, String key, String value ) { 
-		
-		List<String> lore = getLoreSafely( item );
-		if( lore == null ) return false;
-
-		for( int i = 0; i < lore.size(); i++ ) {
-			String loreEntry = lore.get(i);
-			if( loreEntry.startsWith( TAG_FIELD ) ) {
-				int splitter = loreEntry.indexOf( ":" );
-				if( splitter == -1 ) continue; // malformed field!
-				String fieldName = loreEntry.substring( 2, splitter );
-				fieldName = stripFieldKey( fieldName );
-				if( !fieldName.equals(key) ) continue;
-				
-				String newLore = loreEntry.substring( 0, splitter+1 ) + " " + value;
-				lore.set( i, newLore );
-				ItemMeta meta = item.getItemMeta();
-				meta.setLore( lore );
-				item.setItemMeta( meta );
-				return true;
-			}
-		}
-		
-		return false;
-	}
+	} 
 	
 	//---------------------------------------------------------------------------------------------
 }
