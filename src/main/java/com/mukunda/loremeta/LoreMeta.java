@@ -71,6 +71,9 @@ public final class LoreMeta {
 	 * the field value, which will be reflected in the item lore. Fields
 	 * are always stored as string values.
 	 * 
+	 * Fields cannot appear on the first line of the lore, as that would
+	 * collide with the other storage mechanism.
+	 * 
 	 * The @@ marker creates a data initializer. It's format is as follows:
 	 * 
 	 * @@[t:name:value]
@@ -109,6 +112,7 @@ public final class LoreMeta {
 			String entry = lore.get(i);
 			
 			if( entry.startsWith( "##" ) ) {
+				if( i == 0 ) continue; // field cannot be on first line.
 				// this is a field
 				entry = TAG_FIELD + entry.substring( 2 );
 				lore.set( i, entry );
@@ -131,6 +135,9 @@ public final class LoreMeta {
 					 
 					dataEntries.put( key, value ); 
 					changed = true;
+					
+					lore.remove(i);
+					i--;
 				} 
 			}
 		}
